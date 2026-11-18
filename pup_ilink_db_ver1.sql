@@ -312,3 +312,83 @@ ORDER BY
 -- ============================================================
 -- END OF SCRIPT
 -- ============================================================
+
+
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT,
+    email VARCHAR(150) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    user_role ENUM('student', 'faculty', 'supervisor')
+        NOT NULL DEFAULT 'student',
+    account_status ENUM('active', 'inactive', 'suspended')
+        NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_users PRIMARY KEY (user_id),
+    CONSTRAINT uq_users_email UNIQUE (email)
+);
+
+CREATE TABLE students (
+    student_no CHAR(12) NOT NULL,
+    user_id INT NOT NULL,
+    program_code CHAR(10) NOT NULL,
+    year_level INT NOT NULL,
+    section VARCHAR(10) NOT NULL,
+    contact_no CHAR(11) NOT NULL,
+
+    CONSTRAINT pk_students PRIMARY KEY (student_no),
+    CONSTRAINT uq_students_user_id UNIQUE (user_id),
+    CONSTRAINT fk_students_programs
+        FOREIGN KEY (program_code) REFERENCES programs(program_code),
+    CONSTRAINT fk_students_users
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE faculties (
+    faculty_no CHAR(12) NOT NULL,
+    user_id INT NOT NULL,
+    department_code CHAR(10) NOT NULL,
+    is_coordinator BOOLEAN NOT NULL DEFAULT FALSE,
+
+    CONSTRAINT pk_faculty PRIMARY KEY (faculty_no),
+    CONSTRAINT uq_faculty_user_id UNIQUE (user_id),
+    CONSTRAINT fk_faculty_users
+        FOREIGN KEY (user_id) REFERENCES users(user_id),
+    CONSTRAINT fk_faculty_departments
+        FOREIGN KEY (department_code) REFERENCES departments(department_code)
+);
+
+
+CREATE TABLE companies (
+	company_id INT AUTO_INCREMENT, 
+	conpany_name VARCHAR(100) NOT NULL, 
+	address VARCHAR(255) NOT NULL, 
+	industry VARCHAR(100) NOT NULL, 
+	contact_email VARCHAR(100) NOT NULL, 
+	moa_start DATETIME NOT NULL, 
+	moa_end DATETIME NOT NULL, 
+	
+	CONSTRAINT pk_companies PRIMARY KEY (company_id), 
+	CONSTRAINT uq_contact_emails UNIQUE (contact_email),
+	CONSTRAINT chk_companies_moa_dates CHECK (moa_end > moa_start)
+);
+
+CREATE TABLE company_supervisors (
+    supervisor_id INT AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    company_id INT NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    company_position VARCHAR(100) NOT NULL,
+    company_department VARCHAR(100) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    CONSTRAINT pk_company_supervisors PRIMARY KEY (supervisor_id),
+    CONSTRAINT uq_company_supervisors_user_id UNIQUE (user_id),
+    CONSTRAINT fk_company_supervisors_users
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+    CONSTRAINT fk_supervisors_companies 
+		FOREIGN KEY (company_id) REFERENCES companies(company_id);
+);  
