@@ -360,21 +360,6 @@ CREATE TABLE faculties (
         FOREIGN KEY (department_code) REFERENCES departments(department_code)
 );
 
-
-CREATE TABLE companies (
-	company_id INT AUTO_INCREMENT, 
-	conpany_name VARCHAR(100) NOT NULL, 
-	address VARCHAR(255) NOT NULL, 
-	industry VARCHAR(100) NOT NULL, 
-	contact_email VARCHAR(100) NOT NULL, 
-	moa_start DATETIME NOT NULL, 
-	moa_end DATETIME NOT NULL, 
-	
-	CONSTRAINT pk_companies PRIMARY KEY (company_id), 
-	CONSTRAINT uq_contact_emails UNIQUE (contact_email),
-	CONSTRAINT chk_companies_moa_dates CHECK (moa_end > moa_start)
-);
-
 CREATE TABLE company_supervisors (
     supervisor_id INT AUTO_INCREMENT,
     user_id INT NOT NULL,
@@ -392,3 +377,51 @@ CREATE TABLE company_supervisors (
     CONSTRAINT fk_supervisors_companies 
 		FOREIGN KEY (company_id) REFERENCES companies(company_id);
 );  
+
+CREATE TABLE companies (
+	company_id INT AUTO_INCREMENT, 
+	conpany_name VARCHAR(100) NOT NULL, 
+	address VARCHAR(255) NOT NULL, 
+	industry VARCHAR(100) NOT NULL, 
+	contact_email VARCHAR(100) NOT NULL, 
+	moa_start DATETIME NOT NULL, 
+	moa_end DATETIME NOT NULL, 
+	
+	CONSTRAINT pk_companies PRIMARY KEY (company_id), 
+	CONSTRAINT uq_contact_emails UNIQUE (contact_email),
+	CONSTRAINT chk_companies_moa_dates CHECK (moa_end > moa_start)
+);
+
+CREATE TABLE companies (
+	company_id INT AUTO_INCREMENT, 
+	company_name VARCHAR(150) NOT NULL, 
+	address VARCHAR(200) NOT NULL, 
+	contact_email VARCHAR(100) NOT NULL, 
+	moa_start DATE NOT NULL, 
+	moa_end DATE NOT NULL, 
+	
+	CONSTRAINT PRIMARY KEY (company_id)
+	CONSTRAINT uq_companies_email UNIQUE (contact_email), 
+	CONSTRAINT chk_companies_moa_dates CHECK (moa_end > moa_start)
+);
+
+CREATE TABLE requirements (
+	requirement_id INT AUTO_INCREMENT, 
+	requirement_name VARCHAR(150) NOT NULL, 
+	req_description TEXT, 
+	is_mandatory BOOLEAN NOT NULL DEFAULT FALSE, 
+	
+	CONSTRAINT PRIMARY KEY (requirement_id),
+	CONSTRAINT uq_requirements_name UNIQUE (requirement_name)
+);
+
+CREATE TABLE progress_report (
+	report_id INT, 
+	placement_id INT NOT NULL, 
+	report_date DATE DEFAULT (CURRENT_DATE), 
+	hours_rendered DECIMAL NOT NULL, 
+	activities TEXT NOT NULL, 
+	
+	CONSTRAINT PRIMARY KEY (report_id),
+	CONSTRAINT chk_progress_report_hours CHECK (hours_rendered >= 0)
+);
