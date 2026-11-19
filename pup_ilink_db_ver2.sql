@@ -47,14 +47,13 @@ INSERT INTO `colleges` (`college_code`, `college_name`) VALUES
 -- Dumping structure for table pup_ilink_db.companies
 CREATE TABLE IF NOT EXISTS `companies` (
   `company_id` int NOT NULL AUTO_INCREMENT,
-  `conpany_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `address` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
-  `industry` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `company_name` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
+  `address` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
   `contact_email` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `moa_start` datetime NOT NULL,
-  `moa_end` datetime NOT NULL,
+  `moa_start` date NOT NULL,
+  `moa_end` date NOT NULL,
   PRIMARY KEY (`company_id`),
-  UNIQUE KEY `uq_contact_emails` (`contact_email`),
+  UNIQUE KEY `uq_companies_email` (`contact_email`),
   CONSTRAINT `chk_companies_moa_dates` CHECK ((`moa_end` > `moa_start`))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -237,6 +236,31 @@ INSERT INTO `programs` (`program_code`, `program_name`, `department_code`) VALUE
 	('DMET', 'Diploma in Mechanical Engineering Technology', 'ITECH-PROG'),
 	('DOMT', 'Diploma in Office Management Technology', 'ITECH-PROG'),
 	('DRET', 'Diploma in Railway Engineering Technology', 'ITECH-PROG');
+
+-- Dumping structure for table pup_ilink_db.progress_report
+CREATE TABLE IF NOT EXISTS `progress_report` (
+  `report_id` int NOT NULL,
+  `placement_id` int NOT NULL,
+  `report_date` date DEFAULT (curdate()),
+  `hours_rendered` decimal(10,0) NOT NULL,
+  `activities` text COLLATE utf8mb4_general_ci NOT NULL,
+  PRIMARY KEY (`report_id`),
+  CONSTRAINT `chk_progress_report_hours` CHECK ((`hours_rendered` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Dumping data for table pup_ilink_db.progress_report: ~0 rows (approximately)
+
+-- Dumping structure for table pup_ilink_db.requirements
+CREATE TABLE IF NOT EXISTS `requirements` (
+  `requirement_id` int NOT NULL AUTO_INCREMENT,
+  `requirement_name` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
+  `req_description` text COLLATE utf8mb4_general_ci,
+  `is_mandatory` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`requirement_id`),
+  UNIQUE KEY `uq_requirements_name` (`requirement_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Dumping data for table pup_ilink_db.requirements: ~0 rows (approximately)
 
 -- Dumping structure for table pup_ilink_db.students
 CREATE TABLE IF NOT EXISTS `students` (
