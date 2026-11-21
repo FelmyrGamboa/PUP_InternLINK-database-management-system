@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS `colleges` (
   PRIMARY KEY (`college_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Dumping data for table pup_ilink_db.colleges: ~15 rows (approximately)
+-- Dumping data for table pup_ilink_db.colleges: ~14 rows (approximately)
 INSERT INTO `colleges` (`college_code`, `college_name`) VALUES
 	('CADBE', 'College of Architecture, Design and the Built Environment'),
 	('CAF', 'College of Accountancy and Finance'),
@@ -165,12 +165,15 @@ INSERT INTO `departments` (`department_code`, `department_name`, `college_code`)
 CREATE TABLE IF NOT EXISTS `evaluations` (
   `evaluation_id` int NOT NULL AUTO_INCREMENT,
   `placement_id` int NOT NULL,
+  `evaluator_id` char(12) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
   `score` int NOT NULL,
   `comments` text COLLATE utf8mb4_general_ci,
   `date_evaluated` date NOT NULL DEFAULT (curdate()),
   PRIMARY KEY (`evaluation_id`),
   KEY `fk_evals_placement` (`placement_id`),
+  KEY `fk_evals_supervisor` (`evaluator_id`),
   CONSTRAINT `fk_evals_placement` FOREIGN KEY (`placement_id`) REFERENCES `internship_placements` (`placement_id`),
+  CONSTRAINT `fk_evals_supervisor` FOREIGN KEY (`evaluator_id`) REFERENCES `faculties` (`faculty_no`),
   CONSTRAINT `chk_eval_score` CHECK ((`score` between 1 and 100))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -247,7 +250,7 @@ CREATE TABLE IF NOT EXISTS `programs` (
   CONSTRAINT `fk_department_code` FOREIGN KEY (`department_code`) REFERENCES `departments` (`department_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Dumping data for table pup_ilink_db.programs: ~64 rows (approximately)
+-- Dumping data for table pup_ilink_db.programs: ~57 rows (approximately)
 INSERT INTO `programs` (`program_code`, `program_name`, `department_code`) VALUES
 	('ABELS', 'Bachelor of Arts in English Language Studies', 'CAL-EFL'),
 	('ABF', 'Bachelor of Arts in Filipinology', 'CAL-FIL'),
