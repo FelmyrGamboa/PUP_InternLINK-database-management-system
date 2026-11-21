@@ -19,4 +19,4 @@
 
 ## How to setup the mysql database provided
 
-- Use the sql script provided (_pup_ilink_db_ver2.sql_)
+- Use the sql script provided to upload the complete database tables (_pup_ilink_db_completed_table_ver1.sql_)
