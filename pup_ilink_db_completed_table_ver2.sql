@@ -1,5 +1,5 @@
 -- ============================================================
--- PUP InternLINK Database (Version 4)
+-- PUP InternLINK Database (Version 5)
 -- 15 tables. Needs MySQL 8.0.16 or newer.
 --
 -- Made to match the Interface Content documents
@@ -140,7 +140,8 @@ CREATE TABLE IF NOT EXISTS students (
   CONSTRAINT fk_students_programs FOREIGN KEY (program_code) REFERENCES programs (program_code),
   CONSTRAINT fk_students_adviser FOREIGN KEY (adviser_id) REFERENCES faculties (faculty_no),
   CONSTRAINT chk_students_role CHECK (user_role = 'student'),
-  CONSTRAINT chk_students_year CHECK (year_level BETWEEN 1 AND 6),
+  -- CHANGED: year level is 1 to 4 only (was 1 to 6)
+  CONSTRAINT chk_students_year CHECK (year_level BETWEEN 1 AND 4),
   CONSTRAINT chk_students_contact CHECK (contact_no REGEXP '^[0-9]{11}$')
 );
 
@@ -325,14 +326,20 @@ CREATE TABLE IF NOT EXISTS internship_placements (
   )
 );
 
--- One row = one report entry (for example, one day of work).
--- If your team wants weekly reports instead, use one row per week and
--- change the 24 in chk_reports_hours to 168.
--- CHANGED: hours must be more than 0 and not more than 24 (no negative or huge hours).
--- CHANGED: the same placement cannot have two reports with the same date.
+-- Progress reports. There are TWO kinds, set by report_type:
+--   'daily'  = the daily attendance record. One row per day, with the hours worked
+--              that day (more than 0, up to 24) and a short note of what was done.
+--   'weekly' = the weekly report. One row per week with the summary of the week.
+--              Use the MONDAY of the week as report_date. Leave hours empty (NULL).
+-- Hours come ONLY from the daily records, so hours are never counted twice.
+-- (To show the hours of a week, add up that week's daily hours. See sample query 2.)
+-- NEW: report_type.
+-- CHANGED: hours_rendered can be empty, but only for weekly reports.
+-- CHANGED: a placement can have only one report of each kind per date.
 -- CHANGED: removed ON DELETE CASCADE, because we do not delete data (soft delete).
--- NEW: report_status = pending / approved / rejected. Only 'approved' hours count
---   as approved hours. The intern supervisor decides.
+-- NEW: report_status = pending / approved / rejected. Only 'approved' DAILY hours count
+--   as approved hours. The intern supervisor decides. (Your code can approve a whole
+--   week of daily records with one click.)
 -- NEW: supervisor_remarks, reviewed_by, reviewed_at = the supervisor's review.
 -- Your code must also check: the placement is 'active', the date is between the
 -- start and end date, the date is not in the future, and approved or rejected
@@ -340,8 +347,9 @@ CREATE TABLE IF NOT EXISTS internship_placements (
 CREATE TABLE IF NOT EXISTS progress_reports (
   report_id INT NOT NULL AUTO_INCREMENT,
   placement_id INT NOT NULL,
+  report_type ENUM('daily','weekly') NOT NULL DEFAULT 'daily',
   report_date DATE NOT NULL DEFAULT (CURDATE()),
-  hours_rendered DECIMAL(5,2) NOT NULL,
+  hours_rendered DECIMAL(5,2) DEFAULT NULL,
   activities TEXT NOT NULL,
   report_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   supervisor_remarks TEXT,
@@ -349,12 +357,19 @@ CREATE TABLE IF NOT EXISTS progress_reports (
   reviewed_at DATETIME DEFAULT NULL,
   submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (report_id),
-  UNIQUE KEY uq_reports_placement_date (placement_id, report_date),
+  UNIQUE KEY uq_reports_placement_type_date (placement_id, report_type, report_date),
   KEY fk_reports_reviewer (reviewed_by),
   KEY idx_reports_status (report_status),
   CONSTRAINT fk_reports_placement FOREIGN KEY (placement_id) REFERENCES internship_placements (placement_id),
   CONSTRAINT fk_reports_reviewer FOREIGN KEY (reviewed_by) REFERENCES company_supervisors (supervisor_id),
-  CONSTRAINT chk_reports_hours CHECK (hours_rendered > 0 AND hours_rendered <= 24),
+  -- daily: hours are required (more than 0 and not more than 24)
+  -- weekly: hours must be empty
+  CONSTRAINT chk_reports_hours CHECK (
+    (report_type = 'daily' AND hours_rendered IS NOT NULL AND hours_rendered > 0 AND hours_rendered <= 24)
+    OR (report_type = 'weekly' AND hours_rendered IS NULL)
+  ),
+  -- a weekly report must be dated on a Monday
+  CONSTRAINT chk_reports_monday CHECK (report_type = 'daily' OR WEEKDAY(report_date) = 0),
   -- an approved or rejected report must say who reviewed it
   CONSTRAINT chk_reports_reviewed CHECK (report_status = 'pending' OR reviewed_by IS NOT NULL)
 );
@@ -606,6 +621,7 @@ INSERT IGNORE INTO requirements (requirement_name, req_description, is_mandatory
 --                   WHERE a.opportunity_id = o.opportunity_id AND a.student_no = s.student_no);
 
 -- 2) Hours of each placement: rendered, approved, remaining and completion %.
+--    (Only daily records count as hours.)
 -- SELECT p.placement_id,
 --        p.required_hours,
 --        COALESCE(SUM(CASE WHEN r.report_status <> 'rejected' THEN r.hours_rendered END), 0) AS hours_rendered,
@@ -613,7 +629,7 @@ INSERT IGNORE INTO requirements (requirement_name, req_description, is_mandatory
 --        p.required_hours - COALESCE(SUM(CASE WHEN r.report_status = 'approved' THEN r.hours_rendered END), 0) AS remaining_hours,
 --        ROUND(COALESCE(SUM(CASE WHEN r.report_status = 'approved' THEN r.hours_rendered END), 0) / p.required_hours * 100, 1) AS completion_percent
 -- FROM internship_placements p
--- LEFT JOIN progress_reports r ON r.placement_id = p.placement_id
+-- LEFT JOIN progress_reports r ON r.placement_id = p.placement_id AND r.report_type = 'daily'
 -- GROUP BY p.placement_id, p.required_hours;
 
 -- 3) Companies whose MOA ends within 30 days ("Expiring soon"):
@@ -633,7 +649,17 @@ INSERT IGNORE INTO requirements (requirement_name, req_description, is_mandatory
 --    but nobody has confirmed yet):
 -- SELECT p.placement_id
 -- FROM internship_placements p
--- JOIN progress_reports r ON r.placement_id = p.placement_id AND r.report_status = 'approved'
+-- JOIN progress_reports r ON r.placement_id = p.placement_id AND r.report_type = 'daily' AND r.report_status = 'approved'
 -- WHERE p.placement_status = 'active'
 -- GROUP BY p.placement_id, p.required_hours
 -- HAVING SUM(r.hours_rendered) >= p.required_hours;
+
+-- 6) Active placements that have NO weekly report yet for the current week
+--    (for the weekly email reminder):
+-- SELECT p.placement_id, p.application_id
+-- FROM internship_placements p
+-- WHERE p.placement_status = 'active'
+--   AND NOT EXISTS (SELECT 1 FROM progress_reports r
+--                   WHERE r.placement_id = p.placement_id
+--                     AND r.report_type = 'weekly'
+--                     AND r.report_date = DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY));

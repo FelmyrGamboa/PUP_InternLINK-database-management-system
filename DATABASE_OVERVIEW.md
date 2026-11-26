@@ -2,7 +2,7 @@
 
 A short guide to what the database has, what it does, and how it connects to our system screens.
 
-File: `pup_ilink_db_completed_table_ver4.sql` (MySQL 8, **15 tables**)
+File: `pup_ilink_db_completed_table_ver5.sql` (MySQL 8, **15 tables**)
 
 ---
 
@@ -90,8 +90,9 @@ Each arrow means "one row points to another row". For example, an application po
 | Requirements: before / during / after, mandatory or optional | `phase` and `is_mandatory` on `requirements`. |
 | Resubmit a rejected document | Update the same `student_submissions` row and set it back to `pending`. |
 | Progress reports with approval and remarks | `report_status`, `supervisor_remarks`, `reviewed_by`. |
-| No negative or huge hours, one report per date | Hours must be above 0 and at most 24. Unique placement and date. |
-| Hours rendered, approved, remaining, completion % | Calculated by a query (sample query 2), so they are never out of date. |
+| Daily attendance records and weekly reports | `report_type` is `daily` or `weekly`. A daily record holds the hours (above 0, up to 24). A weekly report is a summary dated on a Monday and has no hours, so hours are never counted twice. One of each per date. |
+| Year level 1 to 4 only | A rule on `students.year_level`. |
+| Hours rendered, approved, remaining, completion % | Calculated by a query (sample query 2) from the daily records, so they are never out of date. |
 | "Ready for completion", then confirmation | Sample query 5 finds them. `confirmed_by` is required before a placement is `completed`. |
 | Evaluation by supervisor (and optionally adviser) | `evaluations.evaluation_type`. One of each type per placement. |
 | MOA "expiring soon" | Sample query 3 (`moa_end` within 30 days). |
@@ -107,7 +108,7 @@ Some rules are actions or checks that a database cannot do alone:
 - Accept reports only while the placement is active and the date is within the placement dates, never for future dates
 - Lock approved or rejected reports, and lock evaluations after submitting
 - Show grades to the student only after the placement is completed
-- Send email reminders (students without a report this week, supervisors with pending reports)
+- Send email reminders (students without a weekly report this week, supervisors with pending reports)
 - Warn before deactivating an intern supervisor who still has active interns
 - Check that the intern supervisor belongs to the same company as the posting
 - Hash passwords and tokens (never save plain text)
@@ -118,6 +119,6 @@ The full list is in the `README.md`.
 
 ## 6. Open questions for the team
 
-1. **Daily or weekly reports?** One `progress_reports` row is one entry with a 24-hour limit. For weekly reports, change `24` to `168` in the SQL.
+1. **Hours come only from daily records.** Weekly reports are summaries and have no hours. If your team wants the hours inside the weekly report instead, tell me and the rule can be changed.
 2. **Does the adviser also evaluate students?** The database supports it (`adviser` type). If not, use only the `company` type.
 3. **Program targeting:** it is a list column to keep 15 tables. A separate table would be cleaner, but makes 16.
